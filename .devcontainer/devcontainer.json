@@ -1,0 +1,20 @@
+{
+  "name": "Cloud Infrastructure",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postStartCommand": "pre-commit install && tflint --init",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "hashicorp.hcl",
+        "redhat.vscode-yaml"
+      ]
+    }
+  },
+  "mounts": [
+    // Mount the AWS credentials
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.aws,target=/home/vscode/.aws,type=bind,readonly=true"
+  ]
+}

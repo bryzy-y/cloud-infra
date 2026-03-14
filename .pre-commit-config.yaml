@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.105.0
+    hooks:
+      - id: terraform_fmt
+        name: Terraform Format
+
+      - id: terraform_validate
+        name: Terraform Validate
+
+      - id: terraform_tflint
+        name: TFLint
+
+      - id: terraform_trivy
+        name: Trivy
