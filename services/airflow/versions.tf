@@ -3,7 +3,7 @@ terraform {
 
   backend "s3" {
     bucket       = "cloud-terra-state"
-    key          = "network/terraform.tfstate"
+    key          = "services/airflow/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true
@@ -12,7 +12,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
+}
+
+provider "aws" {
+  region = var.aws_region
 }

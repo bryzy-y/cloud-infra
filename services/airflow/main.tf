@@ -1,52 +1,24 @@
-# Main VPC
-data "aws_vpc" "this" {
-  filter {
-    name   = "tag:Name"
-    values = ["main"]
+data "terraform_remote_state" "platform" {
+  backend = "s3"
+
+  config = {
+    bucket       = "cloud-terra-state"
+    key          = "platform/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
-# We will host airflow-core in the private ipv6-only subnet
-data "aws_subnet" "this" {
-  vpc_id = data.aws_vpc.this.id
-
-  filter {
-    name   = "tag:Name"
-    values = ["private"]
-  }
+locals {
+  platform = data.terraform_remote_state.platform.outputs
 }
-
-resource "aws_security_group" "airflow" {
-  name        = "airflow"
-  description = "Attached to Airflow ECS tasks. Allows all egress; no ingress required for standalone smoke-tests."
-  vpc_id      = data.aws_vpc.this.id
-
-  egress {
-    description = "All outbound IPv4"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description      = "All outbound IPv6"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    ipv6_cidr_blocks = ["::/0"]
-  }
-
-  tags = { Name = "airflow" }
-}
-
 
 module "airflow" {
   source = "../../modules/airflow"
 
-  name   = "main"
-  region = "us-east-1"
-
-  subnet_ids         = [data.aws_subnet.this.id]
-  security_group_ids = [aws_security_group.airflow.id]
+  cluster            = local.platform.ecs_cluster_name
+  vpc_id             = local.platform.vpc_id
+  private_subnet_ids = local.platform.private_subnet_ids
 }
+

@@ -1,57 +1,68 @@
-variable "name" {
-  description = "Name prefix for all resources."
+variable "vpc_id" {
+  description = "VPC ID where Airflow core resources are deployed"
   type        = string
 }
 
-variable "region" {
-  description = "AWS region."
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "List of private subnet IDs for the ECS tasks (minimum 2, different AZs)."
+variable "private_subnet_ids" {
+  description = "Private subnet IDs used by ECS managed instances and service tasks"
   type        = list(string)
 }
 
-variable "security_group_ids" {
-  description = "List of security group IDs to attach to the ECS tasks."
-  type        = list(string)
-  nullable    = true
-  default     = null
-}
-
-variable "ssm_parameter_prefix" {
-  description = "SSM parameter path prefix for Airflow secrets, e.g. /airflow/prod. Must start with /."
+variable "cluster" {
+  description = "Cluster name"
   type        = string
-
-  validation {
-    condition     = startswith(var.ssm_parameter_prefix, "/")
-    error_message = "ssm_parameter_prefix must start with /."
-  }
-
-  default = "/airflow"
 }
 
-variable "log_retention_days" {
-  description = "CloudWatch log group retention in days."
-  type        = number
-  default     = 7
-}
-
-variable "airflow_image" {
-  description = "Docker image used for the Airflow container."
-  type        = string
-  default     = "apache/airflow:slim-3.1.8"
-}
-
-variable "tailscale_auth_key_ssm_parameter" {
-  description = "SSM parameter path for the Tailscale auth key (e.g. /airflow/tailscale-auth-key). Must be stored under ssm_parameter_prefix so the execution role can read it."
+variable "tailscale_auth_key_ssm_parameter_name" {
+  description = "SSM SecureString parameter name holding the Tailscale auth key for the sidecar (for example: /airflow/ts-auth-key)."
   type        = string
   default     = "/airflow/ts-auth-key"
 }
 
-variable "tags" {
-  description = "Tags to apply to all resources."
-  type        = map(string)
-  default     = {}
+variable "tailscale_hostname" {
+  description = "Hostname used by the Tailscale sidecar when joining the tailnet."
+  type        = string
+  default     = "airflow"
+}
+
+variable "tailscale_extra_args" {
+  description = "Extra arguments passed to tailscale up via TS_EXTRA_ARGS."
+  type        = string
+  default     = "--accept-dns=false"
+}
+
+variable "tailscale_serve_config_ssm_parameter_name" {
+  description = "SSM parameter name used to store the Tailscale serve config JSON (written at apply time, read by the init container at task startup)."
+  type        = string
+  default     = "/airflow/ts-serve-config"
+}
+
+variable "airflow_db_init_task_image" {
+  description = "Container image used by the DB bootstrap ECS tasks (for example: alpine/psql)."
+  type        = string
+  default     = "alpine/psql"
+}
+
+variable "airflow_db_host" {
+  description = "PostgreSQL endpoint hostname used by the DB init ECS tasks."
+  type        = string
+  default     = ""
+}
+
+variable "airflow_db_port" {
+  description = "PostgreSQL endpoint port used by the DB init ECS tasks."
+  type        = number
+  default     = 5432
+}
+
+variable "airflow_db_admin_username" {
+  description = "Admin username used to run DB bootstrap SQL statements."
+  type        = string
+  default     = "rod"
+}
+
+variable "airflow_db_admin_password_ssm_parameter_name" {
+  description = "SSM SecureString parameter path holding the admin password used by DB init ECS tasks."
+  type        = string
+  default     = "/airflow/db-password"
 }

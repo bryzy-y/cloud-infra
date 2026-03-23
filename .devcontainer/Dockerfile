@@ -24,3 +24,6 @@ COPY --from=aquasec/trivy:latest /usr/local/bin/trivy /usr/local/bin/
 
 # Install Terraform-docs
 COPY --from=quay.io/terraform-docs/terraform-docs:latest /usr/local/bin/terraform-docs /usr/local/bin/
+
+# Install infracost
+COPY --from=infracost/infracost:latest /usr/bin/infracost /usr/local/bin/
