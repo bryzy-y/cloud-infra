@@ -1,3 +1,4 @@
+
 # Main VPC and networking resources for the platform.
 resource "aws_vpc" "main" {
   cidr_block                       = "10.0.0.0/16"
@@ -24,13 +25,13 @@ resource "aws_egress_only_internet_gateway" "main" {
 # # NAT Gateway (placed in the public subnet for IPv4 egress from private subnets)
 resource "aws_eip" "nat" {
   domain = "vpc"
-  tags   = { Name = "nat" }
+  tags   = { Name = "nat", Tier = "Public" }
 }
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public.id
-  tags          = { Name = "main" }
+  tags          = { Name = "main", Tier = "Public" }
 
   depends_on = [aws_internet_gateway.main]
 }
@@ -49,7 +50,7 @@ resource "aws_subnet" "public" {
   assign_ipv6_address_on_creation = true
   map_public_ip_on_launch         = true
 
-  tags = { Name = "public-1a" }
+  tags = { Name = "public-1a", Tier = "Public" }
 }
 
 resource "aws_subnet" "private_a" {
@@ -61,7 +62,7 @@ resource "aws_subnet" "private_a" {
 
   assign_ipv6_address_on_creation = true
 
-  tags = { Name = "private-1a" }
+  tags = { Name = "private-1a", Tier = "Private" }
 }
 
 resource "aws_subnet" "private_b" {
@@ -73,7 +74,7 @@ resource "aws_subnet" "private_b" {
 
   assign_ipv6_address_on_creation = true
 
-  tags = { Name = "private-1b" }
+  tags = { Name = "private-1b", Tier = "Private" }
 }
 
 # Route Table – Public
@@ -144,3 +145,61 @@ resource "aws_vpc_endpoint" "s3" {
 
   tags = { Name = "s3-endpoint" }
 }
+
+locals {
+  tailscale_port = 41641
+}
+
+# Tailscale direct-connection port (STUN / WireGuard). Allowing inbound
+# enables reliable direct peer connections; without this, traffic falls
+# back to DERP relay which still works but adds latency.
+resource "aws_security_group" "tailscale" {
+  name        = "tailscale-sg"
+  description = "Tailscale subnet router - allow Tailscale UDP and full outbound"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description      = "Tailscale direct connections"
+    from_port        = local.tailscale_port
+    to_port          = local.tailscale_port
+    protocol         = "udp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  egress {
+    description      = "All outbound"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+}
+
+module "tailscale" {
+  source = "masterpointio/tailscale/aws"
+
+  vpc_id     = aws_vpc.main.id
+  subnet_ids = [aws_subnet.public.id] # Ensure subnet router is in a public subnet
+
+  advertise_routes = [
+    aws_subnet.public.cidr_block,
+    aws_subnet.private_a.cidr_block,
+    aws_subnet.private_b.cidr_block,
+  ]
+
+  additional_security_group_ids = [aws_security_group.tailscale.id]  # Attach the security group to the subnet router
+  tailscaled_extra_flags        = ["--port=${local.tailscale_port}"] # Ensure `tailscaled` listens on the same port as the security group is configured
+
+  instance_type           = "t4g.nano"
+  desired_capacity        = 1
+  ssh_enabled             = false
+  session_logging_enabled = false
+  ssm_state_enabled       = true
+
+  name        = "tailscale-subnet-router"
+  primary_tag = "router"
+}
+

@@ -9,7 +9,8 @@
       "extensions": [
         "hashicorp.terraform",
         "hashicorp.hcl",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "ms-python.python"
       ]
     }
   },

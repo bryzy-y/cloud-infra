@@ -33,3 +33,13 @@ variable "ecs_instance_vcpu_count" {
     max = 4
   }
 }
+
+variable "tailscale_oauth_id" {
+  description = "Tailscale OAuth client ID for authentication"
+  type        = string
+}
+
+variable "tailscale_oauth_secret" {
+  description = "Tailscale OAuth client secret for authentication"
+  type        = string
+}

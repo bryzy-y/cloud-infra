@@ -12,11 +12,16 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.0"
+      version = "6.37.0"
     }
 
     time = {
       source  = "hashicorp/time"
+      version = "~> 0.13"
+    }
+
+    tailscale = {
+      source  = "tailscale/tailscale"
       version = "~> 0.13"
     }
   }
@@ -24,4 +29,9 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+}
+
+provider "tailscale" {
+  oauth_client_id     = var.tailscale_oauth_id
+  oauth_client_secret = var.tailscale_oauth_secret
 }

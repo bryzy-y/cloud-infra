@@ -8,16 +8,65 @@ This allows for greater flexibility compared to Fargate and is more cost-effecti
 such as Airflow's core components (scheduler, dag-processor, triggerer, etc.).
 */
 
-
 locals {
   ecs_subnets = [aws_subnet.private_a]
 }
+
+data "aws_iam_policy_document" "trust_policy" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    effect  = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["ecs.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "trust_policy_instance" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    effect  = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+# Infrastructure role for ECS managed instances – allows ECS to manage the underlying EC2 hosts.
+resource "aws_iam_role" "ecs_infrastructure" {
+  name               = "ecs-infrastructure-role"
+  assume_role_policy = data.aws_iam_policy_document.trust_policy.json
+}
+
+# Instance role and profile for ECS managed instances – attached to the EC2 hosts in the Auto Scaling Group.
+# IMPORTANT: This role and profile must be named "ecsInstanceRole" to work with ECS managed instances.
+resource "aws_iam_role" "ecs_managed_instance" {
+  name               = "ecsInstanceRole"
+  assume_role_policy = data.aws_iam_policy_document.trust_policy_instance.json
+}
+
+resource "aws_iam_instance_profile" "ecs_managed_instance" {
+  name = "ecsInstanceRole"
+  role = aws_iam_role.ecs_managed_instance.name
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_instance" {
+  role       = aws_iam_role.ecs_managed_instance.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECSInstanceRolePolicyForManagedInstances"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_infrastructure" {
+  role       = aws_iam_role.ecs_infrastructure.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECSInfrastructureRolePolicyForManagedInstances"
+}
+
 
 # Cluster for running Airflow "core" components.
 resource "aws_ecs_cluster" "this" {
   name = "data-platform-prod"
 }
-
 
 # Security group for ECS managed instances – allow inbound traffic from private subnets
 # and outbound traffic to anywhere
@@ -100,7 +149,8 @@ resource "aws_ecs_cluster_capacity_providers" "this" {
   cluster_name = aws_ecs_cluster.this.name
 
   capacity_providers = [
-    aws_ecs_capacity_provider.managed_instances.name
+    aws_ecs_capacity_provider.managed_instances.name,
+    "FARGATE"
   ]
 
   default_capacity_provider_strategy {

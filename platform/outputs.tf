@@ -17,3 +17,8 @@ output "public_subnet_ids" {
   description = "Public subnet IDs for the data platform"
   value       = [aws_subnet.public.id]
 }
+
+output "tailscale_security_group_id" {
+  description = "Security group ID for Tailscale access to Airflow and RDS"
+  value       = aws_security_group.tailscale.id
+}

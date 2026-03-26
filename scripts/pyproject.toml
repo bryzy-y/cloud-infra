@@ -1,0 +1,13 @@
+[project]
+name = "scripts"
+version = "0.0.1"
+description = "Collection of cloud-infra scripts"
+requires-python = ">=3.14"
+dependencies = [
+    "boto3>=1.42.78",
+]
+
+[dependency-groups]
+dev = [
+    "boto3-stubs[ecs]>=1.42.78",
+]
