@@ -37,5 +37,6 @@ terraform.rc
 #VSCode settings
 .vscode/
 
-# Python virtual environment
+# Python
 .venv/
+*/ruff_cache/

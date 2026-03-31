@@ -104,4 +104,6 @@ resource "postgresql_grant" "airflow_user_public_schema" {
   schema      = "public"
   object_type = "schema"
   privileges  = ["ALL"] # ALL on a schema = CREATE + USAGE
+
+  depends_on = [postgresql_grant.db_privileges]
 }

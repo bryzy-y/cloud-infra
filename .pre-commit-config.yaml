@@ -13,3 +13,11 @@ repos:
 
       - id: terraform_trivy
         name: Trivy
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+
+      - id: ruff-format

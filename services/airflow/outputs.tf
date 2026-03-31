@@ -3,9 +3,9 @@ output "airflow_service" {
   value       = aws_ecs_service.airflow_service.name
 }
 
-output "db_migrate_task_definition_arn" {
-  description = "ARN of the db-migrate ECS task definition"
-  value       = aws_ecs_task_definition.db-migrate.arn
+output "airflow_task_definition_arn" {
+  description = "ARN of the Airflow task definition for running one-off tasks"
+  value       = aws_ecs_task_definition.airflow_utils.arn
 }
 
 output "cluster_name" {

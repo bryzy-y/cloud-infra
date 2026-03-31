@@ -10,7 +10,8 @@
         "hashicorp.terraform",
         "hashicorp.hcl",
         "redhat.vscode-yaml",
-        "ms-python.python"
+        "ms-python.python",
+        "tamasfe.even-better-toml"
       ]
     }
   },

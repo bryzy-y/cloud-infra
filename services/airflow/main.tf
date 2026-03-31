@@ -146,8 +146,9 @@ resource "aws_ssm_parameter" "tailscale_serve_config" {
 *
 */
 
-resource "aws_ecs_task_definition" "db-migrate" {
-  family             = "airflow-db-migration"
+# This task definition is used for running one-off commands on Airflow cluster. It won't be used for the main Airflow service.
+resource "aws_ecs_task_definition" "airflow_utils" {
+  family             = "airflow-utils"
   task_role_arn      = aws_iam_role.airflow_task.arn
   execution_role_arn = aws_iam_role.execution.arn
 
@@ -164,16 +165,10 @@ resource "aws_ecs_task_definition" "db-migrate" {
 
   container_definitions = jsonencode([
     {
-      name      = "db-migration"
+      name      = "airflow-utils"
       image     = "apache/airflow:${var.airflow_version}"
       essential = true
-      command = [
-        "bash",
-        "-c",
-        "airflow db migrate",
-        "airflow users create -u admin -p admin -r Admin -e admin@example.com -f Admin -l Admin"
-
-      ]
+      command   = []
 
       secrets = [{
         name      = "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN"
@@ -197,7 +192,7 @@ resource "aws_ecs_task_definition" "db-migrate" {
         options = {
           awslogs-group         = aws_cloudwatch_log_group.airflow.name
           awslogs-region        = local.aws_region
-          awslogs-stream-prefix = "db-migration"
+          awslogs-stream-prefix = "tasks"
         }
       }
     }
