@@ -11,7 +11,7 @@ data "aws_subnets" "private_subnets" {
   }
 
   tags = {
-    Tier = "Private"
+    Tier = "private"
   }
 }
 
@@ -23,6 +23,13 @@ data "aws_security_group" "tailscale" {
 }
 
 locals {
+  # Common tags for all resources in this module
+  common_tags = {
+    Project     = "airflow"
+    ManagedBy   = "terraform"
+    Environment = "dev"
+  }
+
   # General
   aws_region = data.aws_region.this.id
   account_id = data.aws_caller_identity.this.account_id
@@ -64,14 +71,15 @@ resource "aws_security_group" "airflow" {
   # Allow tailscale router to access Airflow webserver port (8080) in case
   # we need to access the webserver directly (without going through Tailscale sidecar)
   ingress {
+    description     = "Allow Tailscale router to access Airflow webserver port"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [data.aws_security_group.tailscale.id]
   }
 
-  # Allow all outbound traffic
   egress {
+    description      = "Allow all outbound traffic"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
@@ -86,6 +94,8 @@ resource "aws_ecs_service" "airflow_service" {
   desired_count       = 0
   scheduling_strategy = "REPLICA"
   task_definition     = aws_ecs_task_definition.airflow.arn
+
+  propagate_tags = "SERVICE"
 
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
@@ -111,6 +121,12 @@ resource "aws_ecs_service" "airflow_service" {
   lifecycle {
     ignore_changes = [desired_count, capacity_provider_strategy]
   }
+
+  tags = merge(local.common_tags, {
+    Component    = "standalone"
+    ImageVersion = var.airflow_version
+    Type         = "managed-instances"
+  })
 }
 
 resource "aws_cloudwatch_log_group" "airflow" {

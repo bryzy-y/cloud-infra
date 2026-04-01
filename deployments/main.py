@@ -83,7 +83,7 @@ def db_migrate(
 
     response = ecs.run_task(
         cluster=ctx.cluster_name,
-        taskDefinition=ctx.task_def,
+        taskDefinition=ctx.task_definition_arn,
         overrides={
             "containerOverrides": [
                 {
@@ -178,7 +178,6 @@ def deploy_airflow(terraform_dir: str) -> None:
     logger.info(
         f"Updating Airflow service '{ctx.service_name}' to 1 desired instance..."
     )
-
     ecs.update_service(
         cluster=ctx.cluster_name, service=ctx.service_name, desiredCount=1
     )

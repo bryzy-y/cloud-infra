@@ -14,15 +14,10 @@ variable "cluster" {
   type        = string
 }
 
-variable "db_admin_user" {
-  description = "Admin username of the Airflow metadata database (RDS)"
-  type        = string
-}
-
-variable "db_admin_password" {
-  description = "Admin password of the Airflow metadata database (RDS)"
-  type        = string
-  sensitive   = true
+variable "db_admin_credentials_ver" {
+  description = "Version number for the Airflow DB admin credentials (used to force updates when credentials change)"
+  type        = number
+  default     = 1
 }
 
 variable "db_instance_class" {

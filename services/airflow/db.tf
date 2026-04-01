@@ -2,8 +2,26 @@ resource "random_password" "airflow_user" {
   length  = 12
   special = false
 
+  # Regenerate the password whenever RDS instance is replaced
   keepers = {
-    "Version" = 1
+    Version = aws_db_instance.this.id
+  }
+}
+
+resource "random_pet" "admin_user" {
+  separator = ""
+
+  keepers = {
+    Version = var.db_admin_credentials_ver
+  }
+}
+
+resource "random_password" "admin_user" {
+  length  = 12
+  special = false
+
+  keepers = {
+    Version = var.db_admin_credentials_ver
   }
 }
 
@@ -18,12 +36,14 @@ resource "aws_security_group" "rds" {
   vpc_id      = data.aws_vpc.this.id
 
   ingress {
-    description      = "DB port from allowed security groups"
-    from_port        = 5432
-    to_port          = 5432
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description = "DB port from allowed security groups"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    security_groups = [
+      aws_security_group.airflow.id,       # Allow access from Airflow tasks
+      data.aws_security_group.tailscale.id # Allow access from Tailscale router (for maintenance/debugging)
+    ]
   }
 }
 
@@ -38,8 +58,8 @@ resource "aws_db_instance" "this" {
 
   db_name = local.airflow_db
 
-  username = var.db_admin_user
-  password = var.db_admin_password
+  username = random_pet.admin_user.id
+  password = random_password.admin_user.result
 
   # Networking
   db_subnet_group_name   = aws_db_subnet_group.this.name
@@ -67,9 +87,18 @@ resource "aws_db_instance" "this" {
   publicly_accessible = false
 }
 
+resource "aws_ssm_parameter" "db_admin_credentials" {
+  name        = "/airflow/db/admin-credentials"
+  description = "Admin credentials for the Airflow metadata database"
+  type        = "SecureString"
+  value = jsonencode({
+    username = random_pet.admin_user.id
+    password = random_password.admin_user.result
+  })
+}
 
 resource "aws_ssm_parameter" "airflow_db_connection_str" {
-  name        = "/airflow/db-connection-str"
+  name        = "/airflow/db/connection-str"
   description = "Database connection string for Airflow to connect to its metadata database"
   type        = "SecureString"
   value       = local.airflow_connetion_str

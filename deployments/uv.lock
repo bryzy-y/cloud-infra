@@ -61,7 +61,7 @@ wheels = [
 ]
 
 [[package]]
-name = "deploy"
+name = "deployments"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [

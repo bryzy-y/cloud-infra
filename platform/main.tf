@@ -1,3 +1,12 @@
+locals {
+  common_tags = {
+    Environment = "prod"
+    Project     = local.project
+    ManagedBy   = "terraform"
+  }
+
+  project = "data-platform"
+}
 
 # Main VPC and networking resources for the platform.
 resource "aws_vpc" "main" {
@@ -7,31 +16,58 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  tags = { Name = "main" }
+  tags = merge(
+    {
+      Name = "${local.project}-main-vpc"
+    },
+    local.common_tags
+  )
 }
 
 # Internet Gateways
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  tags   = { Name = "main" }
+  tags = merge(
+    {
+      Name = "${local.project}-igw"
+    },
+    local.common_tags
+  )
 }
 
 # Egress-Only Internet Gateway for IPv6-only private subnets
 resource "aws_egress_only_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  tags   = { Name = "main" }
+  tags = merge(
+    {
+      Name = "${local.project}-egress-only-igw"
+    },
+    local.common_tags
+  )
 }
 
 # # NAT Gateway (placed in the public subnet for IPv4 egress from private subnets)
 resource "aws_eip" "nat" {
   domain = "vpc"
-  tags   = { Name = "nat", Tier = "Public" }
+  tags = merge(
+    {
+      Name = "${local.project}-nat"
+      Tier = "public"
+    },
+    local.common_tags
+  )
 }
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public.id
-  tags          = { Name = "main", Tier = "Public" }
+  tags = merge(
+    {
+      Name = "${local.project}-nat-gateway"
+      Tier = "public"
+    },
+    local.common_tags
+  )
 
   depends_on = [aws_internet_gateway.main]
 }
@@ -50,7 +86,14 @@ resource "aws_subnet" "public" {
   assign_ipv6_address_on_creation = true
   map_public_ip_on_launch         = true
 
-  tags = { Name = "public-1a", Tier = "Public" }
+  tags = merge(
+    {
+      Name = "${local.project}-public-1a"
+      Tier = "public"
+      AZ   = "us-east-1a"
+    },
+    local.common_tags
+  )
 }
 
 resource "aws_subnet" "private_a" {
@@ -62,7 +105,14 @@ resource "aws_subnet" "private_a" {
 
   assign_ipv6_address_on_creation = true
 
-  tags = { Name = "private-1a", Tier = "Private" }
+  tags = merge(
+    {
+      Name = "${local.project}-private-1a"
+      Tier = "private"
+      AZ   = "us-east-1a"
+    },
+    local.common_tags
+  )
 }
 
 resource "aws_subnet" "private_b" {
@@ -74,7 +124,14 @@ resource "aws_subnet" "private_b" {
 
   assign_ipv6_address_on_creation = true
 
-  tags = { Name = "private-1b", Tier = "Private" }
+  tags = merge(
+    {
+      Name = "${local.project}-private-1b"
+      Tier = "private"
+      AZ   = "us-east-1b"
+    },
+    local.common_tags
+  )
 }
 
 # Route Table – Public
@@ -93,7 +150,13 @@ resource "aws_route_table" "public" {
     gateway_id      = aws_internet_gateway.main.id
   }
 
-  tags = { Name = "rt-public" }
+  tags = merge(
+    {
+      Name = "${local.project}-rt-public"
+      Tier = "public"
+    },
+    local.common_tags
+  )
 }
 
 resource "aws_route_table_association" "public" {
@@ -117,7 +180,13 @@ resource "aws_route_table" "private" {
     egress_only_gateway_id = aws_egress_only_internet_gateway.main.id
   }
 
-  tags = { Name = "rt-private" }
+  tags = merge(
+    {
+      Name = "${local.project}-rt-private"
+      Tier = "private"
+    },
+    local.common_tags
+  )
 }
 
 resource "aws_route_table_association" "private_a" {
@@ -143,7 +212,13 @@ resource "aws_vpc_endpoint" "s3" {
   # Subnet is IPv6-only
   ip_address_type = "dualstack"
 
-  tags = { Name = "s3-endpoint" }
+  tags = merge(
+    {
+      Name = "${local.project}-s3-endpoint"
+      Tier = "private"
+    },
+    local.common_tags
+  )
 }
 
 locals {
@@ -175,11 +250,11 @@ resource "aws_security_group" "tailscale" {
     cidr_blocks      = ["0.0.0.0/0"]
     ipv6_cidr_blocks = ["::/0"]
   }
-
 }
 
 module "tailscale" {
-  source = "masterpointio/tailscale/aws"
+  source  = "masterpointio/tailscale/aws"
+  version = "2.1.0"
 
   vpc_id     = aws_vpc.main.id
   subnet_ids = [aws_subnet.public.id] # Ensure subnet router is in a public subnet
@@ -201,5 +276,7 @@ module "tailscale" {
 
   name        = "tailscale-subnet-router"
   primary_tag = "router"
+
+  tags = local.common_tags
 }
 

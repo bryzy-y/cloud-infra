@@ -8,6 +8,16 @@ output "airflow_task_definition_arn" {
   value       = aws_ecs_task_definition.airflow_utils.arn
 }
 
+output "airflow_db_instance_address" {
+  description = "Address of the Airflow metadata database instance"
+  value       = aws_db_instance.this.address
+}
+
+output "airflow_db_admin_credentials_arn" {
+  description = "ARN of the SSM parameter storing the Airflow DB admin credentials"
+  value       = aws_ssm_parameter.db_admin_credentials.arn
+}
+
 output "cluster_name" {
   description = "Name of the ECS cluster"
   value       = var.cluster

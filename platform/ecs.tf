@@ -9,7 +9,7 @@ such as Airflow's core components (scheduler, dag-processor, triggerer, etc.).
 */
 
 locals {
-  ecs_subnets = [aws_subnet.private_a]
+  ecs_subnets = [aws_subnet.private_a, aws_subnet.private_b]
 }
 
 data "aws_iam_policy_document" "trust_policy" {
@@ -71,10 +71,12 @@ resource "aws_ecs_cluster" "this" {
 # Security group for ECS managed instances – allow inbound traffic from private subnets
 # and outbound traffic to anywhere
 resource "aws_security_group" "managed_instances" {
-  name   = "managed-instances-sg"
-  vpc_id = aws_vpc.main.id
+  name        = "managed-instances-sg"
+  description = "Security group for ECS managed instances"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
+    description      = "Allow inbound traffic from private subnets"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
@@ -83,6 +85,7 @@ resource "aws_security_group" "managed_instances" {
   }
 
   egress {
+    description      = "Allow all outbound traffic"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
@@ -99,7 +102,6 @@ resource "aws_ecs_capacity_provider" "managed_instances" {
 
   managed_instances_provider {
     infrastructure_role_arn = aws_iam_role.ecs_infrastructure.arn
-    propagate_tags          = "CAPACITY_PROVIDER"
 
     instance_launch_template {
       ec2_instance_profile_arn = aws_iam_instance_profile.ecs_managed_instance.arn
