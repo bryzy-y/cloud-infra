@@ -20,7 +20,10 @@ COPY --from=hashicorp/terraform:latest /bin/terraform /usr/local/bin/
 COPY --from=ghcr.io/terraform-linters/tflint:latest /usr/local/bin/tflint /usr/local/bin/
 
 # Install Trivy
-COPY --from=aquasec/trivy:latest /usr/local/bin/trivy /usr/local/bin/
+COPY --from=aquasec/trivy:0.69.3 /usr/local/bin/trivy /usr/local/bin/
 
 # Install Terraform-docs
 COPY --from=quay.io/terraform-docs/terraform-docs:latest /usr/local/bin/terraform-docs /usr/local/bin/
+
+# Install infracost
+COPY --from=infracost/infracost:latest /usr/bin/infracost /usr/local/bin/
